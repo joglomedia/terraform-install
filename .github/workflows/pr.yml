@@ -1,4 +1,4 @@
-name: ["2. Create Pull Request"]
+name: 2. Create Pull Request
 on:
   workflow_run:
     workflows: ["Run Tests"]
