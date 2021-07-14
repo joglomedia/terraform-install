@@ -1,0 +1,24 @@
+name: Run Testing
+on: [pull_request, push]
+jobs:
+  testing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Testing Dependencies
+        run: |
+          sudo apt-get update -qq -y
+          sudo apt-get install -qq -y bash curl shellcheck
+          sudo curl -s -o /usr/local/bin/shunit2 https://raw.githubusercontent.com/kward/shunit2/master/shunit2
+          sudo chmod a+x /usr/local/bin/shunit2
+      - name: Run Tests
+        env:
+          TERM: xterm-256color
+        run: |
+          shellcheck -s bash -x bin/terraform-selfupgrade
+      - name: Upload crash artifact
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+        name: artifacts
+        path: ./out/artifacts
