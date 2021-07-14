@@ -109,11 +109,11 @@ function determine_tf_sys_arch() {
         x86_64|amd64)
             tf_url_arch="amd64"
         ;;
-        arm|armhf|arm*)
-            tf_url_arch="arm"
-        ;;
         arm64|aarch64)
             tf_url_arch="arm64"
+        ;;
+        arm|armhf|armv*)
+            tf_url_arch="arm"
         ;;
         *)
             tf_url_arch="amd64"
