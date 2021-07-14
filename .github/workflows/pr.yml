@@ -1,7 +1,7 @@
 name: Create Pull Request
 on:
   workflow_run:
-    workflows: ["Run Tests"]
+    workflows: ["Run Testing"]
     branches: [main]
     types:
       - completed
