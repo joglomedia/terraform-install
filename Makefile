@@ -4,15 +4,15 @@ VERSION=0.0.1
 DIRS=etc lib bin sbin share
 INSTALL_DIRS=`find $(DIRS) -type d 2>/dev/null`
 INSTALL_FILES=`find $(DIRS) -type f 2>/dev/null`
-DOC_FILES=*.md *.txt
+DOC_FILES=*.md
 
 PKG_DIR=releases
 PKG_NAME=$(NAME)_$(VERSION)
 PKG=$(PKG_DIR)/$(PKG_NAME).tar.gz
-SIG=$(PKG_DIR)/$(PKG_NAME).asc
+SIG=$(PKG_DIR)/$(PKG_NAME).tar.gz.asc
 
 PREFIX?=/usr/local
-DOC_DIR=$(PREFIX)/share/doc/$(PKG_NAME)
+DOC_DIR=$(PREFIX)/share/doc/$(NAME)
 
 pkg:
 	mkdir -p $(PKG_DIR)
@@ -23,7 +23,7 @@ $(PKG): pkg
 build: $(PKG)
 
 $(SIG): $(PKG)
-	gpg --sign --detach-sign --armor $(PKG)
+	gpg --default-key 9C9D7A0969F91F04 --sign --detach-sign --armor $(PKG)
 
 sign: $(SIG)
 
