@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+
+##
+# Terraform Selfupdate (tfupdate.sh)
+# Bash script to automate update Terraform executable binary file.
+#
+
+# Work even if somebody does "bash tfupdate.sh".
+set -e
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "This command can only be used by root."
+    exit 1
+fi
+
+function version_sort() {
+    # We'd rather use sort -V, but that's not available on Centos 5.    This works
+    # for versions in the form A.B.C.D or shorter, which is enough for our use.
+    sort -t '.' -k 1,1 -k 2,2 -k 3,3 -k 4,4 -g
+}
+
+# Compare two numeric versions in the form "A.B.C".    Works with version numbers
+# having up to four components, since that's enough to handle 
+# Terraform stable version number.
+function version_older_than() {
+    local test_version && \
+    test_version=$(echo "$@" | tr ' ' '\n' | version_sort | head -n 1)
+    local compare_to="${2}"
+    local older_version="${test_version}"
+    test "${older_version}" != "${compare_to}"
+}
+
+function tf_download_report_error() {
+    echo "Couldn't automatically determine the latest version: failed to $* Terraform's releases page"
+}
+
+function get_tf_versions_available() {
+    # Scrap Terraform download page to get all available latest version.
+    tf_download_url="https://releases.hashicorp.com/terraform/"
+
+    local tf_download_page
+    tf_download_page=$(curl -sS --fail "${tf_download_url}") || \
+        tf_download_report_error "download"
+
+    local download_refs
+    download_refs=$(echo "${tf_download_page}" | \
+        grep -owE '"/terraform/[0-9.]*/"') || \
+        tf_download_report_error "parse"
+
+    versions_available=$(echo "${download_refs}" | \
+        sed -e 's~^"/terraform/~~' -e 's~/"$~~') || \
+        tf_download_report_error "extract versions from"
+
+    echo "${versions_available}"
+}
+
+function determine_tf_latest_version() {
+    minimum_version="1.0.0"
+    local versions_available
+    local latest_version
+
+    versions_available=$(get_tf_versions_available)
+    latest_version=$(echo "${versions_available}" | version_sort | tail -n 1) || \
+        report_error "determine latest stable version from"
+
+    if version_older_than "${latest_version}" "${minimum_version}"; then
+        echo "Expected the latest version of Terraform to be at least ${minimum_version} but found
+${latest_version} on Terraform release page"
+        exit 1
+    fi
+
+    echo "${latest_version}"
+}
+
+function determine_tf_sys_arch() {
+    local arch && arch=$(uname -m)
+    local system && system=$(uname -s)
+
+    local tf_url_sys
+    case "${system}" in
+        Linux)
+            tf_url_sys="linux"
+        ;;
+        Darwin)
+            tf_url_sys="darwin"
+        ;;
+        FreeBSD)
+            tf_url_sys="freebsd"
+        ;;
+        OpenBSD)
+            tf_url_sys="openbsd"
+        ;;
+        SunOS)
+            tf_url_sys="solaris"
+        ;;
+        CYGWIN*|MINGW*|UWIN*)
+            tf_url_sys="windows"
+        ;;
+        *)
+            tf_url_sys="linux"
+        ;;
+    esac
+
+    local tf_url_arch
+    case "${arch}" in
+        i386|i486|i586|i686)
+            tf_url_arch="386"
+        ;;
+        x86_64|amd64)
+            tf_url_arch="amd64"
+        ;;
+        arm|armhf|arm*)
+            tf_url_arch="arm"
+        ;;
+        arm64|aarch64)
+            tf_url_arch="arm64"
+        ;;
+        *)
+            tf_url_arch="amd64"
+        ;;
+    esac
+
+    echo "${tf_url_sys}_${tf_url_arch}"
+}
+
+function install_terraform() {
+    # If version not supplied, get the latest stable.
+    tf_version=${1:-$(determine_tf_latest_version)}
+    tf_install_path=${2:-"/usr/local/bin"}
+    tf_sys_arch=$(determine_tf_sys_arch)
+    tf_zip_file_name="terraform_${tf_version}_${tf_sys_arch}.zip"
+    tf_zip_file_url="https://releases.hashicorp.com/terraform/${tf_version}/${tf_zip_file_name}"
+
+    if curl -sLI "${tf_zip_file_url}" | grep -q "HTTP/[.12]* [2].."; then
+        # Download Terraform zip file from releases page.
+        echo "Downloading Terraform ${tf_version} binary file, please wait!"
+
+        curl -s -o "${tf_zip_file_name}" "${tf_zip_file_url}" && \
+        unzip -q "${tf_zip_file_name}" && \
+        rm -f "${tf_zip_file_name}"
+
+        echo "Installing Terraform to ${tf_install_path} path."
+
+        # Backup existing Terraform binary file.
+        if [ -f "${tf_install_path}/terraform" ]; then
+            echo "Found existing Terraform binary, backed up to ${tf_install_path}/terraform.old."
+            mv -f "${tf_install_path}/terraform" "${tf_install_path}/terraform.old"
+        fi
+
+        mv terraform "${tf_install_path}/" && \
+        echo "Terraform ${tf_version} succesfully installed."
+    else
+        echo "Failed to download Terraform zip file, ${tf_zip_file_url} not found."
+        exit 1
+    fi
+}
+
+install_terraform "$@"
+
