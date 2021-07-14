@@ -1,4 +1,4 @@
-name: Run Testing
+name: ["1. Run Testing"]
 on: [pull_request, push]
 jobs:
   testing:
@@ -20,5 +20,5 @@ jobs:
         uses: actions/upload-artifact@v2
         if: failure()
         with:
-        name: artifacts
-        path: ./out/artifacts
+          name: artifacts
+          path: ./out/artifacts
