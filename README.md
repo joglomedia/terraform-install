@@ -1,2 +1,3 @@
-# terraform-selfupgrade
-Bash script to automate update Terraform executable binary file.
+# terraform-install
+
+Bash command line to automate install and update Terraform from official executable binary file.

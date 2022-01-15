@@ -1,5 +1,5 @@
-NAME=terraform-selfupgrade
-VERSION=0.0.1
+NAME=terraform-install
+VERSION=0.0.3
 
 DIRS=etc lib bin sbin share
 INSTALL_DIRS=`find $(DIRS) -type d 2>/dev/null`
@@ -14,32 +14,6 @@ SIG=$(PKG_DIR)/$(PKG_NAME).tar.gz.asc
 PREFIX?=/usr/local
 DOC_DIR=$(PREFIX)/share/doc/$(NAME)
 
-pkg:
-	mkdir -p $(PKG_DIR)
-
-$(PKG): pkg
-	git archive --output=$(PKG) --prefix=$(PKG_NAME)/ HEAD
-
-build: $(PKG)
-
-$(SIG): $(PKG)
-	gpg --default-key 9C9D7A0969F91F04 --sign --detach-sign --armor $(PKG)
-
-sign: $(SIG)
-
-clean:
-	rm -f $(PKG) $(SIG)
-
-all: $(PKG) $(SIG)
-
-test:
-
-tag:
-	git tag v$(VERSION)
-	git push --tags
-
-release: $(PKG) $(SIG) tag
-
 install:
 	for dir in $(INSTALL_DIRS); do mkdir -p $(PREFIX)/$$dir; done
 	for file in $(INSTALL_FILES); do cp $$file $(PREFIX)/$$file; done
@@ -50,5 +24,4 @@ uninstall:
 	for file in $(INSTALL_FILES); do rm -f $(PREFIX)/$$file; done
 	rm -rf $(DOC_DIR)
 
-
-.PHONY: build sign clean test tag release install uninstall all
+.PHONY: install uninstall all
