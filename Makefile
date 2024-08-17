@@ -1,5 +1,5 @@
 NAME=terraform-install
-VERSION=0.0.3
+VERSION=0.1.0
 
 DIRS=etc lib bin sbin share
 INSTALL_DIRS=`find $(DIRS) -type d 2>/dev/null`
@@ -19,6 +19,7 @@ install:
 	for file in $(INSTALL_FILES); do cp $$file $(PREFIX)/$$file; done
 	mkdir -p $(DOC_DIR)
 	cp -r $(DOC_FILES) $(DOC_DIR)/
+	mv $(PREFIX)/bin/terraform-install $(PREFIX)/bin/tfm
 
 uninstall:
 	for file in $(INSTALL_FILES); do rm -f $(PREFIX)/$$file; done

@@ -6,7 +6,7 @@
 # | Min requirement   : GNU/Linux Debian 8, Ubuntu 16.04 or Linux Mint 17   |
 # | Last Update       : 13/08/2021                                          |
 # | Author            : MasEDI.Net (me@masedi.net)                          |
-# | Version           : 0.0.1                                               |
+# | Version           : 0.1.0                                               |
 # +-------------------------------------------------------------------------+
 # | Copyright (c) 2021 MasEDI.Net (https://masedi.net/terraform-install)    |
 # +-------------------------------------------------------------------------+
@@ -204,55 +204,57 @@ function determine_tf_sys_arch() {
 ##
 function install_terraform() {
     # If version not supplied, get the latest stable.
-    tf_version=${1:-$(determine_tf_latest_version)}
-    tf_install_path=${2:-"/usr/local/tfm/versions"}
-    tf_sys_arch=${TFM_ARCH:-$(determine_tf_sys_arch)}
-    tf_dist_mirror=${TFM_TF_DIST_MIRROR:-"https://releases.hashicorp.com/terraform"}
-    tf_zip_file_name="terraform_${tf_version}_${tf_sys_arch}.zip"
-    tf_zip_file_url="${tf_dist_mirror}/${tf_version}/${tf_zip_file_name}"
+    TF_VERSION=${1:-$(determine_tf_latest_version)}
+    TF_INSTALL_PATH=${2:-"${HOME}/.tfm"}
+    TF_SYS_ARCH=${TFM_ARCH:-$(determine_tf_sys_arch)}
+    TF_DIST_MIRROR=${TFM_TF_DIST_MIRROR:-"https://releases.hashicorp.com/terraform"}
+    TF_ZIP_FILENAME="terraform_${TF_VERSION}_${TF_SYS_ARCH}.zip"
+    TF_ZIP_FILE_URL="${TF_DIST_MIRROR}/${TF_VERSION}/${TF_ZIP_FILENAME}"
+    TF_TMP_DIR="${HOME}/.tfm/tmp"
 
-    echo "Installing Terraform ${tf_version} from ${tf_dist_mirror}"
+    echo "Installing Terraform ${TF_VERSION} from ${TF_DIST_MIRROR}"
 
     # Install path directory.
-    [ ! -d "${tf_install_path}" ] && mkdir -p "${tf_install_path}"
+    [ ! -d "${TF_INSTALL_PATH}" ] && mkdir -p "${TF_INSTALL_PATH}"
 
-    if curl -sLI "${tf_zip_file_url}" | grep -q "HTTP/[.12]* [2].."; then
+    if curl -sLI "${TF_ZIP_FILE_URL}" | grep -q "HTTP/[.12]* [2].."; then
         # Download Terraform zip file from releases page.
-        echo -n "Downloading binary file..."
+        echo -n "Downloading binary file, please wait..."
 
-        curl -sL -o "/tmp/${tf_zip_file_name}" "${tf_zip_file_url}" && \
-        unzip -q "/tmp/${tf_zip_file_name}" -d "/tmp/" && \
-        rm -f "/tmp/${tf_zip_file_name}"
+        #curl -sL -o "${TF_TMP_DIR}/${TF_ZIP_FILENAME}" "${TF_ZIP_FILE_URL}" && \
+        curl -# -o "${TF_TMP_DIR}/${TF_ZIP_FILENAME}" "${TF_ZIP_FILE_URL}" && \
+        unzip -q "${TF_TMP_DIR}/${TF_ZIP_FILENAME}" -d "${TF_TMP_DIR}/" && \
+        rm -f "${TF_TMP_DIR}/${TF_ZIP_FILENAME}"
 
-        if [ -f "/tmp/terraform" ]; then
-            echo "OK"
+        if [ -f "${TF_TMP_DIR}/terraform" ]; then
+            echo "Download binary file...OK"
         else
-            echo "ERROR"
+            echo "Download binary file...ERROR"
         fi
 
         # Backup existing Terraform binary file.
-        #if [ -f "${tf_install_path}/terraform" ]; then
+        #if [ -f "${TF_INSTALL_PATH}/terraform" ]; then
             # Check existing Terraform version.
         #    tf_cur_version=$(terraform --version | grep 'Terraform v' | cut -d'v' -f2)
-            #echo "Found existing Terraform binary, backed up to ${tf_install_path}/terraform${tf_cur_version}."
-        #    mv -f "${tf_install_path}/terraform" "${tf_install_path}/terraform.old"
+            #echo "Found existing Terraform binary, backed up to ${TF_INSTALL_PATH}/terraform${tf_cur_version}."
+        #    mv -f "${TF_INSTALL_PATH}/terraform" "${TF_INSTALL_PATH}/terraform.old"
         #fi
 
         echo -n "Installing binary file..."
 
-        mv /tmp/terraform "${tf_install_path}/terraform-${tf_version}" && \
-        chmod +x "${tf_install_path}/terraform-${tf_version}" && \
-        chwon -hR "${USER}:${USER}" "${tf_install_path}/terraform-${tf_version}"
+        mv "${TF_TMP_DIR}/terraform" "${TF_INSTALL_PATH}/terraform-${TF_VERSION}" && \
+        chmod +x "${TF_INSTALL_PATH}/terraform-${TF_VERSION}" && \
+        chown -hR "${USER}:" "${TF_INSTALL_PATH}/terraform-${TF_VERSION}"
 
-        if [ -x "${tf_install_path}/terraform-${tf_version}" ]; then
+        if [ -x "${TF_INSTALL_PATH}/terraform-${TF_VERSION}" ]; then
             echo "OK"
         else
             echo "ERROR"
         fi
-        #echo "Terraform ${tf_version} succesfully installed."
+        #echo "Terraform ${TF_VERSION} succesfully installed."
     else
-        echo "Failed to download Terraform ${tf_version},"
-        echo "remote file '${tf_zip_file_url}' not found."
+        echo "Failed to download Terraform ${TF_VERSION},"
+        echo "remote file '${TF_ZIP_FILE_URL}' not found."
         exit 1
     fi
 }
@@ -265,7 +267,6 @@ function tfm__install() {
     # Check command line arguments.
     if [[ -n "${1}" ]]; then
         TF_VERSION="${1}"
-        TF_DIR="${HOME}/.tfm/versions"
         TF_FORCE_INSTALL=false
         shift # Pass the remaining arguments as command parameters.
 
@@ -325,20 +326,28 @@ function tfm__install() {
         # Installing Terraform.
         DO_INSTALL_TF=""
 
-        if [[ -x "${TF_DIR}/terraform-${TF_VERSION}" && "${TF_FORCE_INSTALL}" != true ]]; then
+        if [[ -x "${TF_VERSIONS_DIR}/terraform-${TF_VERSION}" && "${TF_FORCE_INSTALL}" != true ]]; then
             echo "Terraform ${TF_VERSION} already exists."
 
             while [[ "${DO_INSTALL_TF}" != "y" && "${DO_INSTALL_TF}" != "n" ]]; do
-                read -rp "Do you want to force install? [y/n]: " \
-                    -i y -e DO_INSTALL_TF
+                read -rp "Do you want to re-install? [y/n]: " -e DO_INSTALL_TF
             done
+        else
+            DO_INSTALL_TF="y"
         fi
 
         if [[ ${DO_INSTALL_TF} == y* || ${DO_INSTALL_TF} == Y* ]]; then
-            [ -n "${TFM_DIR}" ] && TF_DIR="${TFM_DIR}/versions"
-            install_terraform "${TF_VERSION}" "${TF_DIR}"
+            [ -n "${TFM_DIR}" ] && TF_VERSIONS_DIR="${TFM_DIR}/versions"
+            install_terraform "${TF_VERSION}" "${TF_VERSIONS_DIR}"
+
+            # Set as default binary executable.
+            if [[ ! -x "${TF_BIN_DIR}/terraform" ]]; then
+                echo "Currently no terraform binary, set ${TF_VERSION} as default executable!"
+                mkdir -p "${TF_BIN_DIR}"
+                ln -sf "${TF_INSTALL_PATH}/terraform-${TF_VERSION}" "${TF_BIN_DIR}/terraform"
+            fi
         else
-            echo "Terraform ${TF_VERSION} installation aborted."
+            echo "Installation aborted."
         fi
     else
         echo "${PROG_NAME} install: missing required arguments."
@@ -348,9 +357,73 @@ function tfm__install() {
 }
 
 ##
+# tfm uninstall [FLAGS] [OPTIONS]
+##
+function tfm__use() {
+    if [[ -n "${1}" ]]; then
+        TF_VERSION="${1}"
+
+        if [[ -f "${TF_VERSIONS_DIR}/terraform-${TF_VERSION}" ]]; then
+            echo "Set Terraform ${TF_VERSION} as default executable binary."
+            ln -sf "${TF_VERSIONS_DIR}/terraform-${TF_VERSION}" "${TF_BIN_DIR}/terraform"
+        else
+            echo "Terraform ${TF_VERSION} executable binary not found."
+            echo "Hint: ${PROG_NAME} install ${TF_VERSION}"
+        fi
+    
+    fi
+}
+
+##
+# tfm uninstall [FLAGS] [OPTIONS]
+##
+function tfm__uninstall() {
+    if [[ -n "${1}" ]]; then
+        TF_VERSION="${1}"
+        DO_REMOVE_TF=""
+
+        if [[ -f "${TF_VERSIONS_DIR}/terraform-${TF_VERSION}" ]]; then
+            while [[ "${DO_REMOVE_TF}" != "y" && "${DO_REMOVE_TF}" != "n" ]]; do
+                read -rp "Do you want to uninstall Terraform ${TF_VERSION}? [y/n]: " \
+                    -e DO_REMOVE_TF
+            done
+        else
+            echo "Terraform ${TF_VERSION} executable binary not found."
+        fi
+
+        if [[ ${DO_REMOVE_TF} == y* || ${DO_REMOVE_TF} == Y* ]]; then
+            rm -f "${TF_VERSIONS_DIR}/terraform-${TF_VERSION}" && \
+            echo "Terraform ${TF_VERSION} successfully uninstalled."
+        else
+            echo "Uninstall aborted."
+        fi
+    else
+        echo "${PROG_NAME} uninstall: missing required arguments."
+        echo "Hint: ${PROG_NAME} uninstall <version>"
+        exit 1
+    fi
+}
+
+##
+# Aliases of tfm uninstall
+##
+function tfm__remove() {
+    tfm__uninstall "$@"
+}
+
+##
+# tfm list installed version
+##
+function tfm__list() {
+    echo "Installed Terraform versions:"
+    find "${TF_VERSIONS_DIR}" | awk '/terraform-/ { print $1 }' | awk -F"-" '{print $NF}'
+}
+
+##
 # tfm list-remote [FLAGS] [OPTIONS]
 ##
 function tfm__list-remote() {
+    echo "Available Terraform versions:"
     tf_versions_remote=$(get_tf_versions_available)
     echo "${tf_versions_remote}" | tr ' ' '\n' | sort -V
 }
@@ -382,7 +455,17 @@ function tfm__version() {
 ##
 function init_tfm() {
     # Check root user.
-    requires_root "$@"
+    #requires_root "$@"
+
+    # Default TFM directories.
+    TF_VERSIONS_DIR="${HOME}/.tfm/versions"
+    TF_BIN_DIR="${HOME}/.tfm/bin"
+
+    if [[ ! -d "${HOME}/.tfm/bin" ]]; then
+        mkdir -p "${HOME}/.tfm/bin"
+        mkdir -p "${HOME}/.tfm/versions"
+        mkdir -p "${HOME}/.tfm/tmp"
+    fi
 
     # Check command line arguments.
     if [[ -n "${1}" ]]; then
