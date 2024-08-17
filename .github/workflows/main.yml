@@ -15,7 +15,9 @@ jobs:
         env:
           TERM: xterm-256color
         run: |
-          shellcheck -s bash -x bin/terraform-selfupgrade
+          shellcheck -s bash -x bin/terraform-install
+          sudo make install
+          command -v tfm
       - name: Upload crash artifact
         uses: actions/upload-artifact@v2
         if: failure()
