@@ -1,6 +1,6 @@
 # terraform-install
 
-Bash command line to automate install and manage Terraform update from official executable binary file.
+Bash script to automate install and manage different versions of Terraform. Easily install Terraform and manage the binary executable update from official releases page.
 
 ## How to Install
 
@@ -8,6 +8,13 @@ Bash command line to automate install and manage Terraform update from official 
 git clone https://github.com/joglomedia/terraform-install.git
 cd terraform-install
 make install
+```
+
+After installation completed, you need to add this two lines of code into your Profile, `.bashrc` or `.zshrc` file.
+
+```
+export TFM_INSTALL="$HOME/.tfm"
+export PATH="$TFM_INSTALL/bin:$PATH"
 ```
 
 ## Usage
